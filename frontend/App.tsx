@@ -26,6 +26,7 @@ type User = {
 
 function App(): React.JSX.Element {
   const [users, setUsers] = useState<User[]>([]);
+  const [pingMessage, setPingMessage] = useState<string>('');
   const isDarkMode = useColorScheme() === 'dark';
 
     useEffect(() => {
@@ -35,6 +36,15 @@ function App(): React.JSX.Element {
       })
       .catch(err => {
         console.error('Failed to fetch users:', err.message);
+      });
+
+          // Ping backend
+    axios.get(`${API_URL}/ping`) // ✅ ADDED
+      .then(res => {
+        setPingMessage(res.data.message); // ✅ ADDED
+      })
+      .catch(err => {
+        console.error('Ping failed:', err.message); // ✅ ADDED
       });
   }, []);
 
