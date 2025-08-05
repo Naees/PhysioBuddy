@@ -1,0 +1,28 @@
+.env
+*.env
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+# Node modules
+node_modules/
+# macOS system files
+.DS_Store
+# Python virtual environments
+venv/
+# Build output
+build/
+dist/
+# Xcode/Android Studio
+*.xcworkspace
+*.xcodeproj
+*.idea/
+*.gradle/
+*.iml
+# Pods (iOS)
+ios/Pods/
+# Log files
+*.log
+# Additional for front
+frontend/node_modules/
+frontend/build/
+frontend/.vscode/
