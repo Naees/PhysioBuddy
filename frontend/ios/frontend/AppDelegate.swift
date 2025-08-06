@@ -7,14 +7,34 @@ import ReactAppDependencyProvider
 class AppDelegate: UIResponder, UIApplicationDelegate {
   var window: UIWindow?
 
+  var bridge: RCTBridge?
+
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
-    guard let jsCodeLocation = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index", fallbackExtension: nil) else {
-      fatalError("Could not find JS bundle URL")
-    }
-    let rootView = RCTRootView(bundleURL: jsCodeLocation, moduleName: "frontend", initialProperties: nil, launchOptions: launchOptions)
+    let jsCodeLocation: URL
+
+  #if DEBUG
+      guard let jsLocation = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index") else {
+          fatalError("Failed to get jsBundleURL")
+      }
+      jsCodeLocation = jsLocation
+  #else
+      guard let jsLocation = Bundle.main.url(forResource: "main", withExtension: "jsbundle") else {
+          fatalError("Failed to load main.jsbundle")
+      }
+      jsCodeLocation = jsLocation
+  #endif
+
+
+    let rootView = RCTRootView(
+      bundleURL: jsCodeLocation,
+      moduleName: "frontend", // Make sure this matches `AppRegistry.registerComponent(...)` in JS
+      initialProperties: nil,
+      launchOptions: launchOptions
+    )
+
     let rootViewController = UIViewController()
     rootViewController.view = rootView
 
