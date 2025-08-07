@@ -19,3 +19,20 @@ frontend/ios/build/
 frontend/ios/.xcode.env.local
 frontend/ios/frontend.xcworkspace/
 
+# Ignore Gradle cache files
+frontend/android/.gradle/
+
+# Ignore build outputs
+frontend/android/app/build/
+frontend/android/build/
+
+# Ignore CMake/Ndk intermediate outputs
+frontend/android/app/.cxx/
+
+# Ignore Gradle lock and hash files explicitly (optional but safer)
+frontend/android/.gradle/**/*.lock
+frontend/android/.gradle/**/*.bin
+frontend/android/.gradle/**/*.probe
+
+# Optional: ignore Android build reports
+frontend/android/build/reports/
