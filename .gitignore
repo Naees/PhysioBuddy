@@ -36,3 +36,7 @@ frontend/android/.gradle/**/*.probe
 
 # Optional: ignore Android build reports
 frontend/android/build/reports/
+
+# Frontend
+README-FRONTEND.md
+types
