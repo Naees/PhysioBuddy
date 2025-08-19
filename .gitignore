@@ -5,34 +5,34 @@ node_modules/
 .DS_Store
 
 # Ruby/Bundler
-frontend/.bundle/
-frontend/vendor/
-frontend/Gemfile.lock # optional
+Physiobuddy/.bundle/
+Physiobuddy/vendor/
+Physiobuddy/Gemfile.lock # optional
 
 # Android
 android/.gradle/
 android/build/
 
 # iOS
-frontend/ios/Pods/
-frontend/ios/build/
-frontend/ios/.xcode.env.local
-frontend/ios/frontend.xcworkspace/
+Physiobuddy/ios/Pods/
+Physiobuddy/ios/build/
+Physiobuddy/ios/.xcode.env.local
+Physiobuddy/ios/Physiobuddy.xcworkspace/
 
 # Ignore Gradle cache files
-frontend/android/.gradle/
+Physiobuddy/android/.gradle/
 
 # Ignore build outputs
-frontend/android/app/build/
-frontend/android/build/
+Physiobuddy/android/app/build/
+Physiobuddy/android/build/
 
 # Ignore CMake/Ndk intermediate outputs
-frontend/android/app/.cxx/
+Physiobuddy/android/app/.cxx/
 
 # Ignore Gradle lock and hash files explicitly (optional but safer)
-frontend/android/.gradle/**/*.lock
-frontend/android/.gradle/**/*.bin
-frontend/android/.gradle/**/*.probe
+Physiobuddy/android/.gradle/**/*.lock
+Physiobuddy/android/.gradle/**/*.bin
+Physiobuddy/android/.gradle/**/*.probe
 
 # Optional: ignore Android build reports
-frontend/android/build/reports/
+Physiobuddy/android/build/reports/
