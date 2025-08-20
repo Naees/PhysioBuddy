@@ -28,6 +28,8 @@ PG DB:
 		POSTGRES_USER= (your own user)
 		POSTGRES_PASSWORD= (your own password)
 		POSTGRES_DB= (your own db name)
+		NGROK_URL= (your ngrok domain)
+		NGROK_AUTHTOKEN= (your ngrok auth token)
 
 	2. docker compose build, followed by docker compose up. 	
 

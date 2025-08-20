@@ -1,8 +1,6 @@
 import { Image } from 'expo-image';
 import { Platform, StyleSheet } from 'react-native';
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -14,11 +12,28 @@ export default function TabTwoScreen() {
   const [users, setUsers] = useState<{ id: number; name: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    axios
-      .get(process.env.EXPO_PUBLIC_API_URL + '/users')
-      .then((res) => setUsers(res.data))
-      .catch((err) => setError(err.message));
+useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(process.env.EXPO_PUBLIC_API_URL + '/users', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setUsers(data);
+      } catch (err: any) {
+        setError(err.message);
+      }
+    };
+    
+    fetchUsers();
   }, []);
 
   return (
@@ -36,6 +51,7 @@ export default function TabTwoScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">This is for Backend connectivity testing</ThemedText>
       </ThemedView>
+      <ThemedText>API URL: {process.env.EXPO_PUBLIC_API_URL}</ThemedText>
       <ThemedText>Check that you are able to see the user names pulled from the Postgresql DB</ThemedText>
       <Collapsible title="Backend & Database Connectivity">
         {error ? (

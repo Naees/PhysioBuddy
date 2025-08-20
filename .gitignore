@@ -4,6 +4,12 @@ node_modules/
 *.env
 .DS_Store
 
+# SSL Certificates (never commit these!)
+certs/
+*.pem
+*.key
+*.crt
+
 # Ruby/Bundler
 Physiobuddy/.bundle/
 Physiobuddy/vendor/
