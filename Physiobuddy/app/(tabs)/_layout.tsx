@@ -1,12 +1,15 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Image } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+
+import chatbotIcon from '../../assets/images/chatbot_icon.png';
+import buddyIcon from '../../assets/images/buddy_camera_icon.png';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -34,12 +37,39 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="chatbot"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Chatbot',
+          tabBarIcon: ({ color, focused }) => (
+            <Image
+              source={chatbotIcon}
+              style={{
+                width: 28,
+                height: 28,
+                tintColor: color,
+                opacity: focused ? 1 : 0.6,
+              }}
+            />
+          ),
         }}
       />
+      {/* <Tabs.Screen
+        name="phyBuddy"
+        options={{
+          title: 'Buddy',
+          tabBarIcon: ({ color, focused }) => (
+            <Image
+              source={buddyIcon}
+              style={{
+                width: 28,
+                height: 28,
+                tintColor: color,
+                opacity: focused ? 1 : 0.6,
+              }}
+            />
+          ),
+        }}
+      /> */}
     </Tabs>
   );
 }
