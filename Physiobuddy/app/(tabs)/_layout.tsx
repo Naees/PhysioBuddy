@@ -53,6 +53,27 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="chatbot-new"
+        options={{
+          title: 'Chat New',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="exercises-new"
+        options={{
+          title: 'Exercises',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="figure.strengthtraining.traditional" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile-new"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+        }}
+      />
       {/* <Tabs.Screen
         name="phyBuddy"
         options={{
