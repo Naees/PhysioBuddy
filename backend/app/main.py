@@ -320,9 +320,16 @@ def chat():
             if patient_result:
                 patient_context = f"Patient: {patient_result[0]}, Injury: {patient_result[1]}, Phase: {patient_result[2]}"
         
+        # Read API key from Docker secret
+        try:
+            with open('/run/secrets/gemini_api_key', 'r') as f:
+                api_key = f.read().strip()
+        except:
+            api_key = os.getenv('GEMINI_API_KEY')  # Fallback for development
+        
         # Gemini API call
         gemini_response = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={os.getenv('GEMINI_API_KEY')}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}",
             json={
                 "contents": [{
                     "parts": [{
