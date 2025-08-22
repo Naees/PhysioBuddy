@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,15 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Button,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useUser } from '@/contexts/UserContext';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { Audio } from 'expo-av';
+import { playTTS } from '@/utils/tts';
 
 interface Exercise {
   id: string;
@@ -32,6 +37,16 @@ export default function ExercisesNewPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentReps, setCurrentReps] = useState(0);
   const [targetReps, setTargetReps] = useState(10);
+  
+  // Camera and pose detection states
+  const [permission, requestPermission] = useCameraPermissions();
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [poseResult, setPoseResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const cameraRef = useRef<any>(null);
+  const [resetMessage, setResetMessage] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([
     {
       id: '1',
@@ -106,6 +121,97 @@ export default function ExercisesNewPage() {
   useEffect(() => {
     fetchExercises();
   }, [selectedPatientId, refreshTrigger]);
+
+  // Auto send frames for pose detection
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (cameraEnabled && selectedExercise) {
+      // Set audio mode to disable camera sounds
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+
+      interval = setInterval(async () => {
+        if (cameraRef.current) {
+          const photo = await cameraRef.current.takePictureAsync({ 
+            quality: 0.5, 
+            base64: false,
+            skipProcessing: true
+          });
+          setPhotoUri(photo.uri);
+
+          setLoading(true);
+          const manipResult = await ImageManipulator.manipulateAsync(
+            photo.uri,
+            [],
+            { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          const fileUri = manipResult.uri;
+          const formData = new FormData();
+          formData.append('image', {
+            uri: fileUri,
+            name: 'photo.jpg',
+            type: 'image/jpeg',
+          } as any);
+
+          try {
+            const response = await fetch(process.env.EXPO_PUBLIC_API_URL + '/pose', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+              body: formData,
+            });
+            
+            const data = await response.json();
+            setPoseResult(data);
+            
+            // Update currentReps from pose detection
+            if (data.reps && data.reps > currentReps) {
+              setCurrentReps(data.reps);
+            }
+          } catch (err) {
+            console.error("Pose detection error:", err);
+            setPoseResult({ error: 'Failed to connect to backend.' });
+          }
+          setLoading(false);
+        }
+      }, 2000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [cameraEnabled, facing, selectedExercise]);
+
+  // TTS Function
+  useEffect(() => {
+    if (poseResult?.feedback && !poseResult.error) {
+      playTTS(poseResult.feedback).catch((e) => console.warn('TTS error', e));
+    }
+  }, [poseResult?.feedback]);
+
+  // Session Reset Function
+  const resetPoseSession = async () => {
+    try {
+      const response = await fetch(process.env.EXPO_PUBLIC_API_URL + '/reset_pose_session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      setPoseResult(data);
+      setResetMessage("Session reset successfully!");
+      setTimeout(() => setResetMessage(""), 3000);
+    } catch (err) {
+      setPoseResult({ error: 'Failed to reset session.' });
+    }
+  };
 
 
 
@@ -330,14 +436,99 @@ export default function ExercisesNewPage() {
                       });
                     }
                     setCurrentReps(0);
+                    // Also reset pose session
+                    resetPoseSession();
                   } catch (error) {
                     setCurrentReps(0);
+                    resetPoseSession();
                   }
                 }}
               >
                 <Text style={styles.secondaryButtonText}>↻ Reset</Text>
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Camera and Pose Detection */}
+          <View style={styles.cameraCard}>
+            <Text style={styles.cameraTitle}>Exercise Form Tracking</Text>
+            {!permission ? (
+              <Text>Loading camera permissions...</Text>
+            ) : !permission.granted ? (
+              <View style={styles.permissionContainer}>
+                <Text style={styles.permissionText}>Camera permission is required for form tracking.</Text>
+                <Button title="Grant Camera Permission" onPress={requestPermission} />
+              </View>
+            ) : (
+              <>
+                <View style={styles.cameraControls}>
+                  <TouchableOpacity
+                    style={[styles.startExerciseButton, cameraEnabled && styles.stopExerciseButton]}
+                    onPress={() => setCameraEnabled(!cameraEnabled)}
+                  >
+                    <Text style={styles.startExerciseButtonText}>
+                      {cameraEnabled ? "Stop Exercise" : "Start Exercise"}
+                    </Text>
+                  </TouchableOpacity>
+                  {cameraEnabled && (
+                    <Button
+                      title={`Switch to ${facing === 'back' ? 'Front' : 'Back'} Camera`}
+                      onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+                    />
+                  )}
+                </View>
+                {cameraEnabled && (
+                  <CameraView
+                    ref={cameraRef}
+                    style={styles.camera}
+                    facing={facing}
+                  >
+                    <Text style={styles.cameraOverlay}>Camera Preview</Text>
+                  </CameraView>
+                )}
+              </>
+            )}
+            
+            {/* Reset Message Status */}
+            {resetMessage ? (
+              <Text style={styles.resetMessage}>{resetMessage}</Text>
+            ) : null}
+            
+            {loading && <Text style={styles.loadingText}>Processing...</Text>}
+            
+            {/* Pose Detection Results */}
+            {poseResult && (
+              <View style={styles.poseResults}>
+                {poseResult.error ? (
+                  <Text style={styles.errorText}>⚠️ {poseResult.error}</Text>
+                ) : (
+                  <>
+                    <View style={styles.poseStatsGrid}>
+                      <View style={styles.poseStatItem}>
+                        <Text style={styles.poseStatValue}>{poseResult.reps}</Text>
+                        <Text style={styles.poseStatLabel}>Reps</Text>
+                      </View>
+                      <View style={styles.poseStatItem}>
+                        <Text style={styles.poseStatValue}>{poseResult.stage}</Text>
+                        <Text style={styles.poseStatLabel}>Stage</Text>
+                      </View>
+                      <View style={styles.poseStatItem}>
+                        <Text style={styles.poseStatValue}>{poseResult.knee_angle}°</Text>
+                        <Text style={styles.poseStatLabel}>Knee</Text>
+                      </View>
+                      <View style={styles.poseStatItem}>
+                        <Text style={styles.poseStatValue}>{poseResult.hip_angle}°</Text>
+                        <Text style={styles.poseStatLabel}>Hip</Text>
+                      </View>
+                    </View>
+                    <View style={styles.feedbackContainer}>
+                      <Text style={styles.feedbackLabel}>💬 Feedback</Text>
+                      <Text style={styles.feedbackText}>{poseResult.feedback}</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Instructions */}
@@ -471,6 +662,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+    paddingBottom: 100,
   },
   scrollContainer: {
     flex: 1,
@@ -814,5 +1006,136 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  // Camera and pose detection styles
+  cameraCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cameraTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  permissionContainer: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  permissionText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  cameraControls: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  camera: {
+    width: '100%',
+    height: 300,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  cameraOverlay: {
+    color: 'white',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 8,
+  },
+  resetMessage: {
+    color: '#10b981',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  loadingText: {
+    color: '#6b7280',
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  poseResults: {
+    marginTop: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  poseStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  poseStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  poseStatValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#5663a7',
+    marginBottom: 4,
+  },
+  poseStatLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  feedbackContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#5663a7',
+  },
+  feedbackLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  feedbackText: {
+    color: '#374151',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 20,
+  },
+  startExerciseButton: {
+    backgroundColor: '#5663a7',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  stopExerciseButton: {
+    backgroundColor: '#ef4444',
+  },
+  startExerciseButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
