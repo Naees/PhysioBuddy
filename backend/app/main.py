@@ -2,14 +2,22 @@ from flask import Flask, jsonify, request, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Imports for pose estimation
 import cv2
 import mediapipe as mp
 import numpy as np
 import tempfile
-
 import time
+
+# Import for TTS
+import requests
+from flask import send_file
+
 
 app = Flask(__name__)
 CORS(app)
@@ -39,7 +47,9 @@ def get_users():
 def ping():
     return {"message": "pong"}
 
+# ###############################################
 # --------------- Pose Estimation ---------------
+# ###############################################
 # Exercise limit default setting variables
 DEFAULT_RECOVERY_THRESHOLD_ANGLE = 160 # Note: This angle is where user will return/at resting position
 DEFAULT_ENGAGED_THRESHOLD_ANGLE = 140 # Note: This angle is where user will get into exercise position
@@ -195,12 +205,12 @@ def pose_estimation():
                 feedback = "You can do this! :)"
                 
             # Readtime audio feedback w/ logic to check if last spoken feedback is the same so as not to keep repeating 
-            if feedback != session['last_feedback'] and feedback != "":
-                current_time = time.time()
-                if current_time - session['last_spoken_time'] > COOLDOWN_SECONDS:
-                    # speak(feedback)
-                    session['last_feedback'] = feedback
-                    session['last_spoken_time'] = current_time
+            # if feedback != session['last_feedback'] and feedback != "":
+            #     current_time = time.time()
+            #     if current_time - session['last_spoken_time'] > COOLDOWN_SECONDS:
+            #         speak(feedback)
+            #         session['last_feedback'] = feedback
+            #         session['last_spoken_time'] = current_time
                     
         except Exception as e:
             return {"error": f"Failed to calculate angles: {str(e)}"}, 500
@@ -218,7 +228,10 @@ def pose_estimation():
             "feedback": feedback
         }
     
-# Add this endpoint to reset the session
+
+# ###############################################
+# -------------- Reset the session --------------
+# ###############################################
 @app.route("/reset_pose_session", methods=["POST"])
 def reset_pose_session():
     # Reset all the session variables
@@ -237,6 +250,76 @@ def reset_pose_session():
         "stage": session['stage'],
         "avg_angle": session['avgAngle']
     }
+
+# ###############################################
+# ------- Generating TTS w/ ElevenLabs API ------
+# ###############################################
+def speak_with_elevenlabs(text):
+    """Generate speech using ElevenLabs API"""
+    API_KEY = os.getenv("ELEVENLABS_API_KEY")
+    VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Default to Rachel voice
+    
+    if not API_KEY:
+        print("Warning: ELEVENLABS_API_KEY not set in environment")
+        return None
+    
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
+    
+    headers = {
+        "xi-api-key": API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "text": text,
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.7
+        }
+    }
+    
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        
+        # Create a temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+        temp_file.write(response.content)
+        temp_file_path = temp_file.name
+        temp_file.close()
+        
+        print(f"[TTS] Generated speech for: {text}")
+        return temp_file_path
+        
+    except Exception as e:
+        print(f"TTS Error: {e}")
+        return None
+
+@app.route("/tts", methods=["POST"])
+def text_to_speech():
+    """Endpoint to generate speech from text"""
+    print("POST /tts")
+    if not request.json or "text" not in request.json:
+        return {"error": "No text provided"}, 400
+    
+    text = request.json["text"]
+    audio_file_path = speak_with_elevenlabs(text)
+    
+    if audio_file_path:
+        # Return audio file as binary response (not attachment)
+        return send_file(
+            audio_file_path,
+            mimetype="audio/mpeg"
+        )
+    else:
+        return {"error": "Failed to generate speech"}, 500
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    return response
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

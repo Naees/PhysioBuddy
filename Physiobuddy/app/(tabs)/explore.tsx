@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, Button, Image } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-import * as FileSystem from 'expo-file-system';
+import { Audio } from 'expo-av';
+import { playTTS } from '@/utils/tts';
 
 export default function Explore() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -13,15 +14,28 @@ export default function Explore() {
   const [loading, setLoading] = useState(false);
   const cameraRef = useRef<any>(null);
   const [resetMessage, setResetMessage] = useState(""); // State for reset message
+  const lastSpokenTime = useRef<number>(0);
 
   // Auto send frames 1sec at a time to backend to check
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
     if (cameraEnabled) {
+      // Set audio mode to disable camera sounds
+      Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: false,
+        playThroughEarpieceAndroid: false,
+      });
+
       interval = setInterval(async () => {
         if (cameraRef.current) {
-          const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
+          const photo = await cameraRef.current.takePictureAsync({ 
+            quality: 0.5, 
+            base64: false,
+            skipProcessing: true
+          });
           setPhotoUri(photo.uri);
 
           // Send to backend automatically every 1 sec
@@ -40,6 +54,7 @@ export default function Explore() {
           } as any);
 
           try {
+            console.log("Sending to:", process.env.EXPO_PUBLIC_API_URL + '/pose');
             const response = await fetch(process.env.EXPO_PUBLIC_API_URL + '/pose', {
               method: 'POST',
               headers: {
@@ -47,9 +62,13 @@ export default function Explore() {
               },
               body: formData,
             });
+            
+            console.log("Response status:", response.status);
             const data = await response.json();
+            console.log("Response data:", data);
             setResult(data);
           } catch (err) {
+            console.error("API call error:", err);
             setResult({ error: 'Failed to connect to backend.' });
           }
           setLoading(false);
@@ -60,7 +79,7 @@ export default function Explore() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [cameraEnabled, facing]);
+    }, [cameraEnabled, facing]);
 
   // Session Reset Function
   const resetSession = async () => {
@@ -82,6 +101,13 @@ export default function Explore() {
     }
   };
 
+  // TTS Function
+  useEffect(() => {
+    if (result?.feedback && !result.error) {
+      playTTS(result.feedback).catch((e) => console.warn('TTS error', e));
+    }
+  }, [result?.feedback]);
+  
     return (
     <View style={{ flex: 1, padding: 16 }}>
       {!permission ? (
@@ -128,6 +154,7 @@ export default function Explore() {
                 </CameraView>
               </>
             )}
+          {/* Reset Message Status */}
           {resetMessage ? (
             <Text style={{ color: 'green', marginBottom: 8, textAlign: 'center' }}>{resetMessage}</Text>
           ) : null}

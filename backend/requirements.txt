@@ -7,3 +7,5 @@ psycopg2-binary
 opencv-python-headless
 mediapipe
 numpy
+requests
+elevenlabs
