@@ -3,7 +3,7 @@ flask_sqlalchemy
 flask-cors
 python-dotenv
 psycopg2-binary
-
+google-genai
 opencv-python-headless
 mediapipe
 numpy

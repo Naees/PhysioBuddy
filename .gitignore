@@ -1,44 +1,6 @@
-# General
-node_modules/
+secrets/
 .env
-*.env
+*.log
+node_modules/
 .DS_Store
-
-# SSL Certificates (never commit these!)
-certs/
-*.pem
-*.key
-*.crt
-
-# Ruby/Bundler
-Physiobuddy/.bundle/
-Physiobuddy/vendor/
-Physiobuddy/Gemfile.lock # optional
-
-# Android
-android/.gradle/
-android/build/
-
-# iOS
-Physiobuddy/ios/Pods/
-Physiobuddy/ios/build/
-Physiobuddy/ios/.xcode.env.local
-Physiobuddy/ios/Physiobuddy.xcworkspace/
-
-# Ignore Gradle cache files
-Physiobuddy/android/.gradle/
-
-# Ignore build outputs
-Physiobuddy/android/app/build/
-Physiobuddy/android/build/
-
-# Ignore CMake/Ndk intermediate outputs
-Physiobuddy/android/app/.cxx/
-
-# Ignore Gradle lock and hash files explicitly (optional but safer)
-Physiobuddy/android/.gradle/**/*.lock
-Physiobuddy/android/.gradle/**/*.bin
-Physiobuddy/android/.gradle/**/*.probe
-
-# Optional: ignore Android build reports
-Physiobuddy/android/build/reports/
+**/.DS_Store

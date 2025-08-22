@@ -51,6 +51,8 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    secrets:
+      - gemini_api_key
     develop:
       watch:
         - action: rebuild
@@ -58,3 +60,7 @@ services:
 
 volumes:
   pgdata:
+
+secrets:
+  gemini_api_key:
+    file: ./secrets/gemini_key.txt

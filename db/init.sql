@@ -91,8 +91,7 @@ CREATE TABLE daily_reflections (
     reflection_text TEXT,
     mood_rating INTEGER CHECK (mood_rating >= 1 AND mood_rating <= 5),
     energy_level INTEGER CHECK (energy_level >= 1 AND energy_level <= 5),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(patient_id, reflection_date)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE weekly_progress (
@@ -131,6 +130,20 @@ CREATE TABLE exercise_sessions (
     pain_rating INTEGER CHECK (pain_rating >= 0 AND pain_rating <= 10),
     notes TEXT,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE exercise_rep_tracking (
+    id SERIAL PRIMARY KEY,
+    session_id INTEGER REFERENCES exercise_sessions(id) ON DELETE CASCADE,
+    patient_id INTEGER REFERENCES patients(id) ON DELETE CASCADE,
+    exercise_id INTEGER REFERENCES exercises(id),
+    current_reps INTEGER DEFAULT 0,
+    target_reps INTEGER NOT NULL,
+    current_set INTEGER DEFAULT 1,
+    target_sets INTEGER NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Communication
@@ -172,6 +185,7 @@ CREATE INDEX idx_medical_info_patient ON medical_information(patient_id);
 CREATE INDEX idx_pain_reports_patient_date ON daily_pain_reports(patient_id, report_date);
 CREATE INDEX idx_exercise_sessions_patient ON exercise_sessions(patient_id, session_date);
 CREATE INDEX idx_chat_messages_patient ON chat_messages(patient_id, timestamp);
+CREATE INDEX idx_rep_tracking_session ON exercise_rep_tracking(session_id, is_active);
 
 -- Insert seed data
 
@@ -191,12 +205,32 @@ INSERT INTO patients (first_name, last_name, email, age) VALUES
 
 -- Exercises
 INSERT INTO exercises (name, description, instructions, difficulty_level, body_part, duration_minutes) VALUES
+-- Knee/ACL exercises
 ('Knee Flexion', 'Basic knee bending exercise', 'Sit on chair, slowly bend knee to 90 degrees, hold for 5 seconds', 'beginner', 'knee', 10),
+('Quad Sets', 'Quadriceps strengthening', 'Sit with leg straight, tighten thigh muscle, hold 5 seconds', 'beginner', 'knee', 8),
+('Straight Leg Raises', 'Strengthen quadriceps without knee stress', 'Lie down, lift straight leg 6 inches, hold 3 seconds', 'intermediate', 'knee', 12),
+('Wall Sits', 'Knee and thigh strengthening', 'Back against wall, slide down to sitting position, hold 30 seconds', 'intermediate', 'knee', 10),
+-- Back exercises
+('Cat-Cow Stretch', 'Spinal mobility', 'On hands and knees, arch and round back alternately', 'beginner', 'back', 8),
+('Pelvic Tilts', 'Core and lower back', 'Lie on back, tilt pelvis to flatten lower back', 'beginner', 'back', 10),
+('Bird Dog', 'Core stability', 'On hands and knees, extend opposite arm and leg', 'intermediate', 'back', 12),
+-- Shoulder exercises
 ('Shoulder Rolls', 'Shoulder mobility exercise', 'Roll shoulders forward 10 times, then backward 10 times', 'beginner', 'shoulder', 5),
-('Wall Push-ups', 'Modified push-up against wall', 'Stand arms length from wall, place palms flat, push in and out', 'beginner', 'chest', 8),
+('Pendulum Swings', 'Gentle shoulder mobility', 'Lean forward, let arm hang, swing gently in circles', 'beginner', 'shoulder', 8),
+('External Rotation', 'Rotator cuff strengthening', 'Elbow at side, rotate arm outward with resistance band', 'intermediate', 'shoulder', 10),
+('Scapular Squeezes', 'Upper back and shoulder blade', 'Squeeze shoulder blades together, hold 5 seconds', 'beginner', 'shoulder', 8),
+-- Ankle exercises
+('Single Leg Stand', 'Balance and stability', 'Stand on one leg for 30 seconds, use wall for support if needed', 'advanced', 'ankle', 10),
+('Ankle Circles', 'Ankle mobility', 'Sit and rotate ankle in circles, 10 each direction', 'beginner', 'ankle', 5),
 ('Calf Raises', 'Strengthen calf muscles', 'Rise up on toes, hold 2 seconds, lower slowly', 'intermediate', 'calf', 12),
-('Hip Bridges', 'Strengthen glutes and core', 'Lie on back, lift hips up, squeeze glutes, hold 3 seconds', 'intermediate', 'hip', 15),
-('Single Leg Stand', 'Balance and stability', 'Stand on one leg for 30 seconds, use wall for support if needed', 'advanced', 'ankle', 10);
+('Heel Walks', 'Ankle dorsiflexion', 'Walk on heels for 20 steps', 'intermediate', 'ankle', 8),
+-- Elbow exercises
+('Wrist Flexor Stretch', 'Tennis elbow relief', 'Extend arm, pull hand back gently, hold 30 seconds', 'beginner', 'elbow', 5),
+('Eccentric Wrist Curls', 'Tendon strengthening', 'Slowly lower weight with wrist, assist up with other hand', 'intermediate', 'elbow', 10),
+('Grip Strengthening', 'Forearm and grip', 'Squeeze tennis ball or grip strengthener', 'beginner', 'elbow', 8),
+-- General exercises
+('Wall Push-ups', 'Modified push-up against wall', 'Stand arms length from wall, place palms flat, push in and out', 'beginner', 'chest', 8),
+('Hip Bridges', 'Strengthen glutes and core', 'Lie on back, lift hips up, squeeze glutes, hold 3 seconds', 'intermediate', 'hip', 15);
 
 -- Medical Information
 INSERT INTO medical_information (patient_id, physiotherapist_id, injury_type, recovery_phase, special_notes) VALUES
@@ -216,16 +250,31 @@ INSERT INTO treatment_plans (patient_id, physiotherapist_id, workouts_per_week, 
 
 -- Patient Exercise Assignments
 INSERT INTO patient_exercise_assignments (patient_id, exercise_id, assigned_by, sets_assigned, reps_assigned) VALUES
-(1, 1, 1, 3, 15), -- John - Knee Flexion
-(1, 5, 1, 2, 12), -- John - Hip Bridges
-(2, 5, 2, 3, 10), -- Maria - Hip Bridges
-(2, 4, 2, 2, 15), -- Maria - Calf Raises
-(3, 2, 1, 3, 10), -- David - Shoulder Rolls
-(3, 3, 1, 2, 8),  -- David - Wall Push-ups
-(4, 6, 3, 3, 30), -- Lisa - Single Leg Stand
-(4, 4, 3, 3, 12), -- Lisa - Calf Raises
-(5, 3, 2, 2, 10), -- James - Wall Push-ups
-(5, 2, 2, 3, 15); -- James - Shoulder Rolls
+-- John (ACL Tear) - Knee-focused exercises
+(1, 1, 1, 3, 15), -- Knee Flexion
+(1, 2, 1, 3, 10), -- Quad Sets
+(1, 3, 1, 2, 8),  -- Straight Leg Raises
+(1, 19, 1, 2, 12), -- Hip Bridges
+-- Maria (Lower Back Strain) - Back and core exercises
+(2, 5, 2, 3, 10), -- Cat-Cow Stretch
+(2, 6, 2, 3, 10), -- Pelvic Tilts
+(2, 7, 2, 2, 8),  -- Bird Dog
+(2, 19, 2, 2, 12), -- Hip Bridges
+-- David (Rotator Cuff) - Shoulder exercises
+(3, 8, 1, 3, 10), -- Shoulder Rolls
+(3, 9, 1, 3, 15), -- Pendulum Swings
+(3, 10, 1, 2, 12), -- External Rotation
+(3, 11, 1, 3, 10), -- Scapular Squeezes
+-- Lisa (Ankle Sprain) - Ankle and balance exercises
+(4, 12, 3, 3, 30), -- Single Leg Stand
+(4, 13, 3, 3, 10), -- Ankle Circles
+(4, 14, 3, 3, 15), -- Calf Raises
+(4, 15, 3, 2, 20), -- Heel Walks
+-- James (Tennis Elbow) - Elbow and forearm exercises
+(5, 16, 2, 3, 30), -- Wrist Flexor Stretch
+(5, 17, 2, 2, 10), -- Eccentric Wrist Curls
+(5, 18, 2, 3, 15), -- Grip Strengthening
+(5, 8, 2, 2, 10);  -- Shoulder Rolls
 
 -- Daily Pain Reports (last 7 days)
 INSERT INTO daily_pain_reports (patient_id, report_date, pain_scale, pain_location, notes) VALUES
@@ -253,10 +302,38 @@ INSERT INTO weekly_progress (patient_id, week_start_date, completion_percentage,
 
 -- Exercise Sessions (recent completions)
 INSERT INTO exercise_sessions (patient_id, exercise_id, assignment_id, session_date, sets_completed, reps_completed, pain_rating, notes) VALUES
-(1, 1, 1, CURRENT_DATE - INTERVAL '1 day', 3, 15, 2, 'Completed full range of motion'),
-(1, 5, 2, CURRENT_DATE - INTERVAL '1 day', 2, 12, 3, 'Slight discomfort in hip'),
-(2, 5, 3, CURRENT_DATE - INTERVAL '2 days', 3, 10, 4, 'Back felt tight'),
-(3, 2, 5, CURRENT_DATE - INTERVAL '1 day', 3, 10, 2, 'Good mobility today');
+-- John - 3 completed (excellent progress)
+(1, 1, 1, CURRENT_DATE, 3, 15, 2, 'Completed full range of motion'),
+(1, 2, 2, CURRENT_DATE, 3, 10, 1, 'Good strength today'),
+(1, 3, 3, CURRENT_DATE, 2, 8, 2, 'Feeling stronger'),
+-- Maria - 1 completed (struggling with pain)
+(2, 5, 5, CURRENT_DATE, 2, 8, 4, 'Back pain limited movement'),
+-- David - 4 completed (very motivated)
+(3, 8, 9, CURRENT_DATE, 3, 10, 1, 'Shoulder mobility excellent'),
+(3, 9, 10, CURRENT_DATE, 3, 15, 1, 'No pain during swings'),
+(3, 10, 11, CURRENT_DATE, 2, 12, 2, 'Good rotation strength'),
+(3, 11, 12, CURRENT_DATE, 3, 10, 1, 'Perfect form today'),
+-- Lisa - 2 completed (steady progress)
+(4, 12, 13, CURRENT_DATE, 2, 25, 3, 'Balance challenging but improving'),
+(4, 14, 15, CURRENT_DATE, 3, 15, 2, 'Calf strength much better'),
+-- James - 1 completed (busy schedule)
+(5, 16, 17, CURRENT_DATE, 3, 30, 3, 'Stretch helped with stiffness');
+
+-- Exercise Rep Tracking (active sessions)
+INSERT INTO exercise_rep_tracking (session_id, patient_id, exercise_id, current_reps, target_reps, current_set, target_sets) VALUES
+-- John's active sessions
+(1, 1, 1, 8, 15, 2, 3),  -- Knee Flexion - mid-session
+(2, 1, 2, 10, 10, 3, 3), -- Quad Sets - completed current set
+-- Maria's active session
+(4, 2, 5, 5, 10, 1, 3),  -- Cat-Cow - just started
+-- David's active sessions
+(5, 3, 8, 10, 10, 3, 3), -- Shoulder Rolls - completed
+(6, 3, 9, 12, 15, 2, 3), -- Pendulum Swings - almost done
+-- Lisa's active sessions
+(9, 4, 12, 20, 30, 1, 3), -- Single Leg Stand - in progress
+(10, 4, 14, 15, 15, 3, 3), -- Calf Raises - completed current set
+-- James's active session
+(11, 5, 16, 25, 30, 2, 3); -- Wrist Flexor Stretch - almost done
 
 -- Chat Messages
 INSERT INTO chat_messages (patient_id, sender_type, sender_id, content, message_type) VALUES
