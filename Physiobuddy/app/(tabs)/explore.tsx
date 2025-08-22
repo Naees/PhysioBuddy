@@ -12,6 +12,7 @@ export default function Explore() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const cameraRef = useRef<any>(null);
+  const [resetMessage, setResetMessage] = useState(""); // State for reset message
 
   // Auto send frames 1sec at a time to backend to check
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function Explore() {
           const photo = await cameraRef.current.takePictureAsync({ quality: 0.5, base64: false });
           setPhotoUri(photo.uri);
 
-          // Send to backend automatically
+          // Send to backend automatically every 1 sec
           setLoading(true);
           const manipResult = await ImageManipulator.manipulateAsync(
             photo.uri,
@@ -53,13 +54,33 @@ export default function Explore() {
           }
           setLoading(false);
         }
-      }, 1000); // every 1 second
+      }, 2000);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [cameraEnabled, facing]);
+
+  // Session Reset Function
+  const resetSession = async () => {
+    try {
+      const response = await fetch(process.env.EXPO_PUBLIC_API_URL + '/reset_pose_session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      const data = await response.json();
+      setResult(data);
+      // Show a temporary message
+      setResetMessage("Session reset successfully!");
+      // Clear message after 3 seconds
+      setTimeout(() => setResetMessage(""), 3000);
+    } catch (err) {
+      setResult({ error: 'Failed to reset session.' });
+    }
+  };
 
     return (
     <View style={{ flex: 1, padding: 16 }}>
@@ -69,40 +90,47 @@ export default function Explore() {
         </View>
       ) : !permission.granted ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>Explore Camera Page</Text>
           <Text style={{ marginBottom: 16 }}>Camera permission is required.</Text>
           <Button title="Grant Camera Permission" onPress={requestPermission} />
         </View>
       ) : (
         <>
-          <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 12 }}>Explore Camera Page</Text>
-          <Button
-            title={cameraEnabled ? "Hide Camera" : "Show Camera"}
-            onPress={() => setCameraEnabled(!cameraEnabled)}
-          />
-          {cameraEnabled && (
-            <>
-              <Button
-                title={`Switch to ${facing === 'back' ? 'Front' : 'Back'} Camera`}
-                onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
-              />
-              <CameraView
-                ref={cameraRef}
-                style={{ 
-                  width: 398,
-                  height: 600,
-                  // flex: 1, 
-                  marginTop: 16, 
-                  borderRadius: 12, 
-                  overflow: 'hidden' 
-                }}
-                facing={facing}
-              >
-                {/* Camera overlay text */}
-                <Text style={{ color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: 8 }}>Camera Preview</Text>
-              </CameraView>
-            </>
-          )}
+          <Text style={{ marginBottom: 12 }}></Text>
+            <Button
+              title={cameraEnabled ? "Hide Camera" : "Show Camera"}
+              onPress={() => setCameraEnabled(!cameraEnabled)}
+            />
+            {cameraEnabled && (
+              <>
+                <Button
+                  title={`Switch to ${facing === 'back' ? 'Front' : 'Back'} Camera`}
+                  onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+                />
+                <Button
+                  title="Reset Exercise Counter"
+                  onPress={resetSession}
+                  color="#FF6347"
+                />
+                <CameraView
+                  ref={cameraRef}
+                  style={{ 
+                    width: 398,
+                    height: 550,
+                    // flex: 1, 
+                    marginTop: 16, 
+                    borderRadius: 12, 
+                    overflow: 'hidden' 
+                  }}
+                  facing={facing}
+                >
+                  {/* Camera overlay text */}
+                  <Text style={{ color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: 8 }}>Camera Preview</Text>
+                </CameraView>
+              </>
+            )}
+          {resetMessage ? (
+            <Text style={{ color: 'green', marginBottom: 8, textAlign: 'center' }}>{resetMessage}</Text>
+          ) : null}
           {loading && <Text>Processing...</Text>}
           {result && (
             <View style={{ marginTop: 16 }}>
@@ -110,8 +138,12 @@ export default function Explore() {
                 <Text style={{ color: 'red' }}>Error: {result.error}</Text>
               ) : (
                 <>
+                  <Text>Reps: {result.reps}</Text>
+                  <Text>Stage: {result.stage}</Text>
+                  <Text>Average Angle: {result.avg_angle}</Text>
                   <Text>Knee Angle: {result.knee_angle}</Text>
-                  <Text>Message: {result.message}</Text>
+                  <Text>Hip Angle: {result.hip_angle}</Text>
+                  <Text>Feedback: {result.feedback}</Text>
                 </>
               )}
             </View>
