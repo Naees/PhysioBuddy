@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   messagesContent: {
-    paddingBottom: 20,
+    paddingBottom: 140,
   },
   messageContainer: {
     marginBottom: 16,
@@ -301,9 +301,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#666666',
   },
   inputContainer: {
+    position: 'absolute',
+    bottom: 45,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   inputWrapper: {
     flexDirection: 'row',

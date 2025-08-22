@@ -111,7 +111,7 @@ export default function ProfileNewPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -333,7 +333,7 @@ export default function ProfileNewPage() {
 
         {/* Upcoming Appointments */}
         <View style={[styles.card, styles.appointmentCard]}>
-          <View style={styles.cardContent}>
+          <View style={[styles.cardContent, styles.appointmentContent]}>
             <Text style={styles.appointmentTitle}>📅 Your Upcoming Appointments</Text>
             <View style={styles.appointmentDetails}>
               <Text style={styles.appointmentDate}>Friday, 8 August 2025</Text>
@@ -353,6 +353,9 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     backgroundColor: '#f0f7ff',
@@ -596,7 +599,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#6b7280',
-    width: 32,
+    width: 40,
+    textAlign: 'left',
   },
   painReportCompleted: {
     flexDirection: 'row',
@@ -790,5 +794,9 @@ const styles = StyleSheet.create({
   appointmentTime: {
     fontSize: 14,
     color: '#be185d',
+  },
+  appointmentContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
   },
 });

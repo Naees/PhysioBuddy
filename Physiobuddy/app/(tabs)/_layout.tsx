@@ -37,7 +37,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chatbot"
+        name="chatbot-new"
         options={{
           title: 'Chatbot',
           tabBarIcon: ({ color, focused }) => (
@@ -54,13 +54,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chatbot-new"
-        options={{
-          title: 'Chat New',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="message.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="exercises-new"
         options={{
           title: 'Exercises',
@@ -68,29 +61,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explore',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+        }}
+      />
+
+      <Tabs.Screen
         name="profile-new"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
-      {/* <Tabs.Screen
-        name="phyBuddy"
-        options={{
-          title: 'Buddy',
-          tabBarIcon: ({ color, focused }) => (
-            <Image
-              source={buddyIcon}
-              style={{
-                width: 28,
-                height: 28,
-                tintColor: color,
-                opacity: focused ? 1 : 0.6,
-              }}
-            />
-          ),
-        }}
-      /> */}
     </Tabs>
   );
 }
