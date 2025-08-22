@@ -8,9 +8,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { useUser } from '@/contexts/UserContext';
 
 interface Exercise {
   id: string;
+  exerciseId?: number;
   name: string;
   duration: string;
   reps: string;
@@ -22,10 +25,13 @@ interface Exercise {
 }
 
 export default function ExercisesNewPage() {
+  const { selectedPatientId, refreshTrigger } = useUser();
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [currentSet, setCurrentSet] = useState(1);
   const [isActive, setIsActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [currentReps, setCurrentReps] = useState(0);
+  const [targetReps, setTargetReps] = useState(10);
   const [exercises, setExercises] = useState<Exercise[]>([
     {
       id: '1',
@@ -97,14 +103,79 @@ export default function ExercisesNewPage() {
     }
   ]);
 
-  const completedCount = exercises.filter(ex => ex.completed).length;
-  const progressPercentage = (completedCount / exercises.length) * 100;
+  useEffect(() => {
+    fetchExercises();
+  }, [selectedPatientId, refreshTrigger]);
 
-  const startExercise = (exercise: Exercise) => {
+
+
+  const fetchExercises = async () => {
+    console.log('Fetching exercises for patient:', selectedPatientId);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/today`);
+      if (response.ok) {
+        const exercisesData = await response.json();
+        console.log('Exercises data:', exercisesData);
+        const formattedExercises = exercisesData.map((ex: any, index: number) => {
+          const difficultyMap: { [key: string]: 'Easy' | 'Medium' | 'Hard' } = {
+            'beginner': 'Easy',
+            'intermediate': 'Medium', 
+            'advanced': 'Hard'
+          };
+          
+          return {
+            id: (index + 1).toString(),
+            exerciseId: ex.id || (index + 1),
+            name: ex.name,
+            duration: `${ex.duration} min`,
+            reps: `${ex.reps} reps`,
+            sets: ex.sets,
+            difficulty: difficultyMap[ex.difficulty] || 'Medium',
+            completed: ex.status === 'completed',
+            description: ex.description,
+            instructions: ex.instructions ? ex.instructions.split('. ').filter((i: string) => i.length > 0) : [
+              'Follow your physiotherapist\'s guidance',
+              'Perform the exercise slowly and controlled',
+              'Stop if you experience pain beyond 6/10',
+              'Breathe normally throughout the movement',
+              'Rest between sets as needed'
+            ]
+          };
+        });
+        console.log('Setting exercises:', formattedExercises.map(ex => ({ name: ex.name, completed: ex.completed })));
+        setExercises([...formattedExercises]); // Force new array reference
+      }
+    } catch (error) {
+      console.error('Failed to fetch exercises:', error);
+    }
+  };
+
+  const completedCount = exercises.filter(ex => ex.completed).length;
+  const progressPercentage = exercises.length > 0 ? (completedCount / exercises.length) * 100 : 0;
+
+  const startExercise = async (exercise: Exercise) => {
     setSelectedExercise(exercise.id);
     setCurrentSet(1);
-    setTimeLeft(parseInt(exercise.duration) * 60); // Convert minutes to seconds
+    setTimeLeft(parseInt(exercise.duration) * 60);
     setIsActive(false);
+    
+    // Fetch current reps from database
+    try {
+      if (exercise.exerciseId) {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/${exercise.exerciseId}/reps`);
+        if (response.ok) {
+          const repsData = await response.json();
+          setCurrentReps(repsData.current_reps);
+          setTargetReps(repsData.target_reps);
+        } else {
+          setCurrentReps(0);
+          setTargetReps(parseInt(exercise.reps));
+        }
+      }
+    } catch (error) {
+      setCurrentReps(0);
+      setTargetReps(parseInt(exercise.reps));
+    }
   };
 
   const toggleTimer = () => {
@@ -133,20 +204,39 @@ export default function ExercisesNewPage() {
     };
   }, [isActive, timeLeft]);
 
-  const completeSet = () => {
+  const completeSet = async () => {
     const exercise = exercises.find(ex => ex.id === selectedExercise);
     if (exercise && currentSet < exercise.sets) {
       setCurrentSet(prev => prev + 1);
+      setCurrentReps(0);
       setTimeLeft(parseInt(exercise.duration) * 60 / exercise.sets);
       setIsActive(false);
     } else {
-      // Mark exercise as completed
-      setExercises(prev => prev.map(ex => 
-        ex.id === selectedExercise ? { ...ex, completed: true } : ex
-      ));
-      Alert.alert('Great job!', 'Exercise completed successfully!');
+      // Complete exercise and save to backend
+      try {
+        if (exercise?.exerciseId) {
+          const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/${exercise.exerciseId}/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          if (response.ok) {
+            // Mark exercise as completed locally
+            setExercises(prev => prev.map(ex => 
+              ex.id === selectedExercise ? { ...ex, completed: true } : ex
+            ));
+            Alert.alert('Great job!', 'Exercise completed and saved!');
+          } else {
+            Alert.alert('Completed!', 'Exercise completed but not saved to server.');
+          }
+        }
+      } catch (error) {
+        Alert.alert('Completed!', 'Exercise completed but not saved to server.');
+      }
+      
       setSelectedExercise(null);
       setCurrentSet(1);
+      setCurrentReps(0);
       setIsActive(false);
     }
   };
@@ -200,25 +290,50 @@ export default function ExercisesNewPage() {
             <Text style={styles.exerciseDescription}>{selectedEx.description}</Text>
             <View style={styles.exerciseStats}>
               <Text style={styles.statText}>Set {currentSet} of {selectedEx.sets}</Text>
-              <Text style={styles.statText}>{selectedEx.reps}</Text>
+              <Text style={styles.statText}>Reps: {currentReps}/{targetReps}</Text>
             </View>
           </View>
 
-          {/* Timer */}
+          {/* Rep Counter */}
           <View style={styles.timerCard}>
-            <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+            <Text style={styles.repCounterText}>{currentReps}</Text>
+            <Text style={styles.repCounterLabel}>Reps Completed</Text>
             <View style={styles.timerControls}>
               <TouchableOpacity 
                 style={[styles.timerButton, styles.primaryButton]}
-                onPress={toggleTimer}
+                onPress={async () => {
+                  try {
+                    if (selectedEx.exerciseId) {
+                      await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/${selectedEx.exerciseId}/reps`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'increment' })
+                      });
+                    }
+                    setCurrentReps(prev => prev + 1);
+                  } catch (error) {
+                    setCurrentReps(prev => prev + 1);
+                  }
+                }}
               >
-                <Text style={styles.timerButtonText}>
-                  {isActive ? '⏸ Pause' : '▶ Start'}
-                </Text>
+                <Text style={styles.timerButtonText}>+ Rep</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.timerButton, styles.secondaryButton]}
-                onPress={resetTimer}
+                onPress={async () => {
+                  try {
+                    if (selectedEx.exerciseId) {
+                      await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/${selectedEx.exerciseId}/reps`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'reset' })
+                      });
+                    }
+                    setCurrentReps(0);
+                  } catch (error) {
+                    setCurrentReps(0);
+                  }
+                }}
               >
                 <Text style={styles.secondaryButtonText}>↻ Reset</Text>
               </TouchableOpacity>
@@ -239,14 +354,16 @@ export default function ExercisesNewPage() {
           </View>
 
           {/* Complete Set Button */}
-          <TouchableOpacity 
-            style={styles.completeButton}
-            onPress={completeSet}
-          >
-            <Text style={styles.completeButtonText}>
-              {currentSet >= selectedEx.sets ? 'Complete Exercise' : 'Complete Set'}
-            </Text>
-          </TouchableOpacity>
+          {currentReps >= targetReps && (
+            <TouchableOpacity 
+              style={styles.completeButton}
+              onPress={completeSet}
+            >
+              <Text style={styles.completeButtonText}>
+                {currentSet >= selectedEx.sets ? 'Complete Exercise' : 'Complete Set'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -255,7 +372,7 @@ export default function ExercisesNewPage() {
   // Main Exercises List View
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContainer}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Today's Exercises</Text>
@@ -358,6 +475,9 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     paddingHorizontal: 16,
+  },
+  scrollContent: {
+    paddingBottom: 60,
   },
   detailContainer: {
     flex: 1,
@@ -511,7 +631,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 0,
   },
   motivationEmoji: {
     fontSize: 48,
@@ -598,6 +718,17 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: 'bold',
     color: '#5663a7',
+    marginBottom: 24,
+  },
+  repCounterText: {
+    fontSize: 64,
+    fontWeight: 'bold',
+    color: '#5663a7',
+    marginBottom: 8,
+  },
+  repCounterLabel: {
+    fontSize: 16,
+    color: '#6b7280',
     marginBottom: 24,
   },
   timerControls: {

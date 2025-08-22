@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { useUser } from '@/contexts/UserContext';
 
 interface PatientData {
   name: string;
@@ -27,18 +29,18 @@ interface PainScale {
 }
 
 export default function ProfileNewPage() {
+  const { user, loading: userLoading, selectedPatientId, setSelectedPatientId, availablePatients, patientsLoading } = useUser();
   const [reflection, setReflection] = useState('');
-  
-  const patientData: PatientData = {
-    name: "Sean Mitchell",
-    age: 28,
-    specialNote: "Allergic to ibuprofen. Previous ACL reconstruction 2019.",
-    injuryType: "Knee Surgery (Meniscus Repair)",
-    recoveryPhase: "Phase 2 - Early Mobility",
-    workoutsAllocated: 6
-  };
+  const [weeklyProgress, setWeeklyProgress] = useState(42);
+  const [progressData, setProgressData] = useState<any>({ exercises_completed: 3, exercises_planned: 6, weekly_target: 6 });
 
-  const weeklyPainScale: PainScale[] = [
+  const [patientInfo, setPatientInfo] = useState<any>(null);
+  const [todayExercises, setTodayExercises] = useState<any[]>([
+    { name: "Shoulder Rotations", status: "completed" },
+    { name: "Knee Strengthening", status: "pending" },
+    { name: "Back Stretches", status: "pending" }
+  ]);
+  const [painReports, setPainReports] = useState<PainScale[]>([
     { day: "MON", scale: 6, completed: true },
     { day: "TUE", scale: 5, completed: true },
     { day: "WED", scale: 5, completed: true },
@@ -46,14 +48,120 @@ export default function ProfileNewPage() {
     { day: "FRI", scale: 0, completed: false },
     { day: "SAT", scale: 0, completed: false },
     { day: "SUN", scale: 0, completed: false },
-  ];
+  ]);
 
-  const weeklyProgress = 42;
+  const [showPatientSelector, setShowPatientSelector] = useState(false);
+  const [appointment, setAppointment] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfileData();
+    }
+  }, [user, selectedPatientId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user) {
+        fetchProfileData();
+      }
+    }, [user, selectedPatientId])
+  );
+
+  const fetchProfileData = async () => {
+    try {
+      const [patientResponse, painResponse, progressResponse, exercisesResponse, appointmentResponse] = await Promise.all([
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}`),
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/pain-reports`),
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/progress`),
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/exercises/today`),
+        fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/appointments`)
+      ]);
+
+      if (patientResponse.ok) {
+        const patientData = await patientResponse.json();
+        setPatientInfo(patientData);
+      }
+
+      if (painResponse.ok) {
+        const painData = await painResponse.json();
+        if (painData.length > 0) {
+          const formattedPain = painData.map((report: any) => ({
+            day: report.date.toUpperCase(),
+            scale: report.scale,
+            completed: report.scale > 0
+          }));
+          setPainReports(formattedPain);
+        }
+      }
+
+      if (progressResponse.ok) {
+        const progressInfo = await progressResponse.json();
+        setWeeklyProgress(progressInfo.completion_percentage || 42);
+        setProgressData({
+          exercises_completed: progressInfo.exercises_completed || 3,
+          exercises_planned: progressInfo.exercises_planned || 6,
+          weekly_target: progressInfo.weekly_target || 6
+        });
+      }
+
+
+
+      if (exercisesResponse.ok) {
+        const exercisesData = await exercisesResponse.json();
+        setTodayExercises(exercisesData);
+      }
+
+      if (appointmentResponse.ok) {
+        const appointmentData = await appointmentResponse.json();
+        setAppointment(appointmentData);
+      } else {
+        setAppointment(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile data:', error);
+    }
+  };
+
+  const getCurrentPatientName = () => {
+    const currentPatient = availablePatients.find(p => p.id.toString() === selectedPatientId);
+    return currentPatient ? currentPatient.first_name : 'Patient';
+  };
+
+  if (userLoading || patientsLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading user data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>No user data available</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const patientData: PatientData = {
+    name: patientInfo ? `${patientInfo.first_name} ${patientInfo.last_name}` : user.name,
+    age: patientInfo?.age || user.age,
+    specialNote: patientInfo?.special_notes || user.specialNotes,
+    injuryType: patientInfo?.injury_type || user.injuryType,
+    recoveryPhase: patientInfo?.recovery_phase || user.recoveryPhase,
+    workoutsAllocated: patientInfo?.workouts_per_week || user.workoutsPerWeek
+  };
+
+
 
   const exportPatientInfo = async () => {
     const patientInfo = {
       ...patientData,
-      weeklyPainScale: weeklyPainScale.filter(day => day.completed),
+      weeklyPainScale: painReports.filter(day => day.completed),
       weeklyProgress,
       reflection,
       lastUpdated: new Date().toISOString(),
@@ -79,7 +187,7 @@ export default function ProfileNewPage() {
   };
 
   const getCompletedPainData = () => {
-    const completed = weeklyPainScale.filter(day => day.completed);
+    const completed = painReports.filter(day => day.completed);
     if (completed.length === 0) return { average: 0, trend: 'stable' };
     
     const average = completed.reduce((sum, day) => sum + day.scale, 0) / completed.length;
@@ -111,7 +219,13 @@ export default function ProfileNewPage() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <TouchableOpacity 
+        style={styles.overlay} 
+        activeOpacity={1}
+        onPress={() => setShowPatientSelector(false)}
+        disabled={!showPatientSelector}
+      >
+        <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -124,18 +238,56 @@ export default function ProfileNewPage() {
                 <Text style={styles.headerSubtitle}>Medical Dashboard</Text>
               </View>
             </View>
-            <TouchableOpacity 
-              style={styles.exportButton}
-              onPress={exportPatientInfo}
-            >
-              <Text style={styles.exportButtonText}>📤 Export</Text>
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={styles.patientSelector}
+                onPress={() => setShowPatientSelector(!showPatientSelector)}
+              >
+                <Text style={styles.patientSelectorText}>{getCurrentPatientName()} ▼</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.exportButton}
+                onPress={exportPatientInfo}
+              >
+                <Text style={styles.exportButtonText}>📤 Export</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+
+          {/* Patient Selector Dropdown */}
+          {showPatientSelector && (
+            <View style={styles.patientDropdown}>
+              {availablePatients.length > 0 ? availablePatients.map((patient) => (
+                <TouchableOpacity
+                  key={patient.id}
+                  style={[
+                    styles.patientOption,
+                    patient.id.toString() === selectedPatientId && styles.selectedPatientOption
+                  ]}
+                  onPress={() => {
+                    setSelectedPatientId(patient.id.toString());
+                    setShowPatientSelector(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.patientOptionText,
+                    patient.id.toString() === selectedPatientId && styles.selectedPatientOptionText
+                  ]}>
+                    {patient.name}
+                  </Text>
+                </TouchableOpacity>
+              )) : (
+                <View style={styles.patientOption}>
+                  <Text style={styles.patientOptionText}>Loading patients...</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Welcome Message */}
           <View style={styles.welcomeSection}>
             <Text style={styles.welcomeTitle}>
-              Good morning, {patientData.name.split(' ')[0]}!
+              Good morning, {getCurrentPatientName()}!
             </Text>
             <Text style={styles.welcomeSubtitle}>
               How do you feel about your current health conditions?
@@ -155,6 +307,25 @@ export default function ProfileNewPage() {
               numberOfLines={3}
               textAlignVertical="top"
             />
+            <TouchableOpacity 
+              style={styles.saveButton}
+              onPress={async () => {
+                try {
+                  const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/patients/${selectedPatientId}/reflections`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reflection_text: reflection })
+                  });
+                  if (response.ok) {
+                    Alert.alert('Success', 'Reflection saved successfully!');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to save reflection');
+                }
+              }}
+            >
+              <Text style={styles.saveButtonText}>Save Reflection</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -227,7 +398,7 @@ export default function ProfileNewPage() {
             {/* Daily Pain Scale */}
             <View style={styles.dailyReports}>
               <Text style={styles.dailyReportsTitle}>Daily Reports</Text>
-              {weeklyPainScale.map((day, index) => (
+              {painReports.map((day, index) => (
                 <View key={index} style={styles.dailyReportItem}>
                   <Text style={styles.dayLabel}>{day.day}</Text>
                   {day.completed ? (
@@ -266,16 +437,16 @@ export default function ProfileNewPage() {
               <View style={styles.progressStats}>
                 <View style={styles.progressTarget}>
                   <Text style={styles.progressTargetTitle}>Weekly Target</Text>
-                  <Text style={styles.progressTargetSubtitle}>6 sessions planned</Text>
+                  <Text style={styles.progressTargetSubtitle}>{progressData.weekly_target} sessions planned</Text>
                 </View>
                 
                 <View style={styles.progressNumbers}>
                   <View style={styles.progressNumber}>
-                    <Text style={styles.progressNumberValue}>3</Text>
+                    <Text style={styles.progressNumberValue}>{progressData.exercises_completed}</Text>
                     <Text style={styles.progressNumberLabel}>Completed</Text>
                   </View>
                   <View style={styles.progressNumber}>
-                    <Text style={styles.progressNumberValue}>3</Text>
+                    <Text style={styles.progressNumberValue}>{progressData.exercises_planned - progressData.exercises_completed}</Text>
                     <Text style={styles.progressNumberLabel}>Remaining</Text>
                   </View>
                 </View>
@@ -305,29 +476,39 @@ export default function ProfileNewPage() {
           </View>
           <View style={styles.cardContent}>
             <View style={styles.exercisesList}>
-              <View style={styles.exerciseItem}>
-                <Text style={styles.exerciseName}>Shoulder Rotations</Text>
-                <View style={[styles.exerciseStatus, styles.completedStatus]}>
-                  <Text style={styles.completedStatusText}>Completed</Text>
+              {todayExercises.length > 0 ? todayExercises.map((exercise, index) => (
+                <View key={index} style={styles.exerciseItem}>
+                  <Text style={styles.exerciseName}>{exercise.name}</Text>
+                  <View style={[
+                    styles.exerciseStatus,
+                    exercise.status === 'completed' ? styles.completedStatus :
+                    exercise.status === 'pending' ? styles.pendingStatus : styles.inProgressStatus
+                  ]}>
+                    <Text style={[
+                      exercise.status === 'completed' ? styles.completedStatusText :
+                      exercise.status === 'pending' ? styles.pendingStatusText : styles.inProgressStatusText
+                    ]}>
+                      {exercise.status === 'completed' ? 'Completed' :
+                       exercise.status === 'pending' ? 'Pending' : 'In Progress'}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.exerciseItem}>
-                <Text style={styles.exerciseName}>Knee Strengthening</Text>
-                <View style={[styles.exerciseStatus, styles.inProgressStatus]}>
-                  <Text style={styles.inProgressStatusText}>In Progress</Text>
-                </View>
-              </View>
-              <View style={styles.exerciseItem}>
-                <Text style={styles.exerciseName}>Back Stretches</Text>
-                <View style={[styles.exerciseStatus, styles.pendingStatus]}>
-                  <Text style={styles.pendingStatusText}>Pending</Text>
-                </View>
-              </View>
+              )) : (
+                <Text style={styles.exerciseName}>No exercises assigned for today</Text>
+              )}
             </View>
-            <View style={styles.exercisesProgressBar}>
-              <View style={[styles.exercisesProgressFill, { width: '33%' }]} />
-            </View>
-            <Text style={styles.exercisesProgressText}>1 of 3 exercises completed</Text>
+            {todayExercises.length > 0 && (
+              <>
+                <View style={styles.exercisesProgressBar}>
+                  <View style={[styles.exercisesProgressFill, { 
+                    width: `${(todayExercises.filter(ex => ex.status === 'completed').length / todayExercises.length) * 100}%` 
+                  }]} />
+                </View>
+                <Text style={styles.exercisesProgressText}>
+                  {todayExercises.filter(ex => ex.status === 'completed').length} of {todayExercises.length} exercises completed
+                </Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -336,12 +517,19 @@ export default function ProfileNewPage() {
           <View style={[styles.cardContent, styles.appointmentContent]}>
             <Text style={styles.appointmentTitle}>📅 Your Upcoming Appointments</Text>
             <View style={styles.appointmentDetails}>
-              <Text style={styles.appointmentDate}>Friday, 8 August 2025</Text>
-              <Text style={styles.appointmentTime}>• Physio session @15:00</Text>
+              {appointment ? (
+                <>
+                  <Text style={styles.appointmentDate}>{appointment.date}</Text>
+                  <Text style={styles.appointmentTime}>• Physio session @{appointment.time}</Text>
+                </>
+              ) : (
+                <Text style={styles.appointmentDate}>No upcoming appointments</Text>
+              )}
             </View>
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -350,6 +538,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fafbfc',
+  },
+  overlay: {
+    flex: 1,
   },
   scrollContainer: {
     flex: 1,
@@ -448,6 +639,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
     minHeight: 80,
+    marginBottom: 12,
+  },
+  saveButton: {
+    backgroundColor: '#1e40af',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -794,6 +998,63 @@ const styles = StyleSheet.create({
   appointmentTime: {
     fontSize: 14,
     color: '#be185d',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  patientSelector: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#1e40af',
+  },
+  patientSelectorText: {
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  patientDropdown: {
+    position: 'absolute',
+    top: 80,
+    right: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+    minWidth: 150,
+  },
+  patientOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  selectedPatientOption: {
+    backgroundColor: '#f0f7ff',
+  },
+  patientOptionText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  selectedPatientOptionText: {
+    color: '#1e40af',
+    fontWeight: '600',
   },
   appointmentContent: {
     paddingHorizontal: 24,
