@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUser } from '@/contexts/UserContext';
 
 interface ChatMessage {
   id: string;
@@ -20,22 +21,11 @@ interface ChatMessage {
 }
 
 export default function ChatbotNewPage() {
+  const { selectedPatientId } = useUser();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       content: "Hello! 👋 I'm here to guide you through your recovery. What's bothering you today?",
-      sender: 'bot',
-      timestamp: new Date()
-    },
-    {
-      id: '2',
-      content: "My knee feels a bit tight when I bend it during the heel slides. Should I stop?",
-      sender: 'user',
-      timestamp: new Date()
-    },
-    {
-      id: '3',
-      content: "A little tightness is okay — your knee is still healing. But don't push into sharp pain. Here's how you can ease into movement today:\n • Use a towel under your heel to help guide the slide\n • Warm up first with 10 ankle pumps\n • Only bend to the range that feels mildly tight, not painful\n\nWould you like me to adjust your reps or suggest a warm-up video?",
       sender: 'bot',
       timestamp: new Date()
     }
@@ -104,21 +94,41 @@ export default function ChatbotNewPage() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    // Simulate bot typing delay
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: currentMessage,
+          patient_id: selectedPatientId 
+        })
+      });
+      
+      const data = await response.json();
+      
       const botResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: getBotResponse(inputMessage),
+        content: data.response || 'Sorry, I had trouble understanding that. Could you try rephrasing?',
         sender: 'bot',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        content: 'Sorry, I\'m having connection issues. Please try again later.',
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const renderMessage = (message: ChatMessage, index: number) => {
@@ -136,7 +146,7 @@ export default function ChatbotNewPage() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingBottom: 44 }]}>
       <KeyboardAvoidingView 
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -253,7 +263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   messagesContent: {
-    paddingBottom: 140,
+    paddingBottom: 20,
   },
   messageContainer: {
     marginBottom: 16,
@@ -301,10 +311,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#666666',
   },
   inputContainer: {
-    position: 'absolute',
-    bottom: 45,
-    left: 0,
-    right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#ffffff',

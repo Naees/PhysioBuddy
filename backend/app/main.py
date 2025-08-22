@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from sqlalchemy import text
 import os
+import requests
 
 # Imports for pose estimation
 import cv2
@@ -299,6 +300,64 @@ def complete_exercise(patient_id, exercise_id):
 @app.route("/ping")
 def ping():
     return {"message": "pong"}
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        data = request.get_json()
+        message = data.get('message', '')
+        patient_id = data.get('patient_id')
+        
+        # Get patient context
+        patient_context = ""
+        if patient_id:
+            patient_result = db.session.execute(
+                text("SELECT first_name, injury_type, recovery_phase FROM patients p "
+                "LEFT JOIN medical_information mi ON p.id = mi.patient_id "
+                "WHERE p.id = :patient_id"),
+                {"patient_id": patient_id}
+            ).fetchone()
+            if patient_result:
+                patient_context = f"Patient: {patient_result[0]}, Injury: {patient_result[1]}, Phase: {patient_result[2]}"
+        
+        # Gemini API call
+        gemini_response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={os.getenv('GEMINI_API_KEY')}",
+            json={
+                "contents": [{
+                    "parts": [{
+                        "text": f"You are a helpful physiotherapy assistant. {patient_context}\n\nPatient message: {message}\n\nProvide supportive, encouraging advice. Keep responses under 100 words."
+                    }]
+                }]
+            }
+        )
+        
+        if gemini_response.status_code == 200:
+            response_data = gemini_response.json()
+            bot_message = response_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # Log usage
+            print(f"Gemini API call successful - Patient: {patient_id}, Message length: {len(message)}")
+            
+            # Save to database
+            if patient_id:
+                db.session.execute(
+                    text("INSERT INTO chat_messages (patient_id, sender_type, content) VALUES (:patient_id, 'patient', :message)"),
+                    {"patient_id": patient_id, "message": message}
+                )
+                db.session.execute(
+                    text("INSERT INTO chat_messages (patient_id, sender_type, content) VALUES (:patient_id, 'bot', :message)"),
+                    {"patient_id": patient_id, "message": bot_message}
+                )
+                db.session.commit()
+            
+            return jsonify({"response": bot_message})
+        else:
+            print(f"Gemini API error: {gemini_response.status_code} - {gemini_response.text}")
+            return jsonify({"error": "Failed to get response from Gemini"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- Pose Estimation ---
 mp_pose = mp.solutions.pose
