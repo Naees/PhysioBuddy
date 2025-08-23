@@ -5,7 +5,7 @@
 PhysioBuddy is an innovative mobile application that revolutionizes physiotherapy by combining AI-powered pose estimation, intelligent chatbot assistance, and comprehensive patient management to deliver personalized rehabilitation experiences.
 
 <p align='center'>
-  <img src="public/introbanner.png" width=150 />
+  <img src="public/introbanner.png" width=450 />
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@ PhysioBuddy is an innovative mobile application that revolutionizes physiotherap
 
 ## Meet the team 
 <p align='center'>
-  <img src="public/groupphoto.jpeg" width=150 />
+  <img src="public/groupphoto.jpeg" width=450 />
 </p>
  
 1.  Kaibao (Nanyang Technological University, Computer Science Undergraduate)
