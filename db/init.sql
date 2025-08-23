@@ -206,6 +206,7 @@ INSERT INTO patients (first_name, last_name, email, age) VALUES
 -- Exercises
 INSERT INTO exercises (name, description, instructions, difficulty_level, body_part, duration_minutes) VALUES
 -- Knee/ACL exercises
+('Squats', 'Functional knee and hip strengthening', 'Stand with feet shoulder-width apart, lower body as if sitting back into chair, keep knees behind toes', 'intermediate', 'knee', 12),
 ('Knee Flexion', 'Basic knee bending exercise', 'Sit on chair, slowly bend knee to 90 degrees, hold for 5 seconds', 'beginner', 'knee', 10),
 ('Quad Sets', 'Quadriceps strengthening', 'Sit with leg straight, tighten thigh muscle, hold 5 seconds', 'beginner', 'knee', 8),
 ('Straight Leg Raises', 'Strengthen quadriceps without knee stress', 'Lie down, lift straight leg 6 inches, hold 3 seconds', 'intermediate', 'knee', 12),
@@ -251,10 +252,11 @@ INSERT INTO treatment_plans (patient_id, physiotherapist_id, workouts_per_week, 
 -- Patient Exercise Assignments
 INSERT INTO patient_exercise_assignments (patient_id, exercise_id, assigned_by, sets_assigned, reps_assigned) VALUES
 -- John (ACL Tear) - Knee-focused exercises
-(1, 1, 1, 3, 15), -- Knee Flexion
-(1, 2, 1, 3, 10), -- Quad Sets
-(1, 3, 1, 2, 8),  -- Straight Leg Raises
-(1, 19, 1, 2, 12), -- Hip Bridges
+(1, 1, 1, 3, 12), -- Squats
+(1, 2, 1, 3, 15), -- Knee Flexion
+(1, 3, 1, 3, 10), -- Quad Sets
+(1, 4, 1, 2, 8),  -- Straight Leg Raises
+(1, 20, 1, 2, 12), -- Hip Bridges
 -- Maria (Lower Back Strain) - Back and core exercises
 (2, 5, 2, 3, 10), -- Cat-Cow Stretch
 (2, 6, 2, 3, 10), -- Pelvic Tilts
@@ -302,10 +304,10 @@ INSERT INTO weekly_progress (patient_id, week_start_date, completion_percentage,
 
 -- Exercise Sessions (recent completions)
 INSERT INTO exercise_sessions (patient_id, exercise_id, assignment_id, session_date, sets_completed, reps_completed, pain_rating, notes) VALUES
--- John - 3 completed (excellent progress)
-(1, 1, 1, CURRENT_DATE, 3, 15, 2, 'Completed full range of motion'),
-(1, 2, 2, CURRENT_DATE, 3, 10, 1, 'Good strength today'),
-(1, 3, 3, CURRENT_DATE, 2, 8, 2, 'Feeling stronger'),
+-- John - 3 completed (squats not completed)
+(1, 2, 2, CURRENT_DATE, 3, 15, 2, 'Completed full range of motion'),
+(1, 3, 3, CURRENT_DATE, 3, 10, 1, 'Good strength today'),
+(1, 4, 4, CURRENT_DATE, 2, 8, 2, 'Feeling stronger'),
 -- Maria - 1 completed (struggling with pain)
 (2, 5, 5, CURRENT_DATE, 2, 8, 4, 'Back pain limited movement'),
 -- David - 4 completed (very motivated)
@@ -322,8 +324,8 @@ INSERT INTO exercise_sessions (patient_id, exercise_id, assignment_id, session_d
 -- Exercise Rep Tracking (active sessions)
 INSERT INTO exercise_rep_tracking (session_id, patient_id, exercise_id, current_reps, target_reps, current_set, target_sets) VALUES
 -- John's active sessions
-(1, 1, 1, 8, 15, 2, 3),  -- Knee Flexion - mid-session
-(2, 1, 2, 10, 10, 3, 3), -- Quad Sets - completed current set
+(1, 1, 2, 8, 15, 2, 3),  -- Knee Flexion - mid-session
+(2, 1, 3, 10, 10, 3, 3), -- Quad Sets - completed current set
 -- Maria's active session
 (4, 2, 5, 5, 10, 1, 3),  -- Cat-Cow - just started
 -- David's active sessions
