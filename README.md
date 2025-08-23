@@ -4,8 +4,13 @@
 
 PhysioBuddy is an innovative mobile application that revolutionizes physiotherapy by combining AI-powered pose estimation, intelligent chatbot assistance, and comprehensive patient management to deliver personalized rehabilitation experiences.
 
+
+
+## Awards & Recognition
+- 1st Place GenAI Augmentation Challenge 2025 
+
 ## Presentation Slides
-- **https://www.canva.com/design/DAGwn_C0Gv0/4m44hCUbpjhj9XxcwU5SHA/edit
+- https://www.canva.com/design/DAGwn_C0Gv0/4m44hCUbpjhj9XxcwU5SHA/edit
 
 ## Key Features
 
@@ -254,9 +259,6 @@ We welcome contributions from the healthcare and technology communities:
 3. Commit your changes (`git commit -m 'Add blah blah blah'`)
 4. Push to the branch (`git push origin feature/...`)
 5. Open a Pull Request
-
-## Awards & Recognition
-- Hopefully we win something in the future.
 
 *Built for healthcare innovation competitions and hackathons*
 ---
