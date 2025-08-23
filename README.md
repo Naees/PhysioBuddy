@@ -4,7 +4,17 @@
 
 PhysioBuddy is an innovative mobile application that revolutionizes physiotherapy by combining AI-powered pose estimation, intelligent chatbot assistance, and comprehensive patient management to deliver personalized rehabilitation experiences.
 
+<p align='center'>
+  <img src="public/card.png" width=150 />
+</p>
 
+<p align="center">
+    <a href="https://github.com/Naees/PhysioBuddy/tree/Production/Physiobuddy">React Native Frontend</a>
+    |
+    <a href="https://github.com/Naees/PhysioBuddy/tree/Production/backend">Python Flask Backend</a>
+    |
+    <a href="">Demo Video</a>
+</p>
 
 ## Awards & Recognition
 - 1st Place GenAI Augmentation Challenge 2025 
