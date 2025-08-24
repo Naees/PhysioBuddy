@@ -29,9 +29,6 @@ PhysioBuddy is an innovative mobile application that revolutionizes physiotherap
 2.  Aiya (Nanyang Technological University, Computer Science with Second Major Business Undergraduate)
 3.  Sean (Nanyang Technological University, Computer Engineering Undergraduate)
 
-## Presentation Pitch Slides
-- https://www.canva.com/design/DAGwn_C0Gv0/4m44hCUbpjhj9XxcwU5SHA/edit
-
 ## Key Features
 
 ### AI-Powered Exercise Tracking
