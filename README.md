@@ -81,6 +81,8 @@ PhysioBuddy is an innovative mobile application that revolutionizes physiotherap
 - **MediaPipe** for real-time pose estimation and exercise tracking
 - **Computer Vision** algorithms for form analysis and rep counting
 - **TensorFlow** integration for AI model inference
+- **ElevenLabs** for Text-to-Speech (TTS) using its deep learning AI model for natural intonation, expressive voice styles, and emotion-infused speech
+- **Gemini** for real-time 24/7 personalised AI chatbot that answers FAQs
 
 ## Getting Started
 
