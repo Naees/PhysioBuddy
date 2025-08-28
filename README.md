@@ -13,7 +13,7 @@ PhysioBuddy is an innovative mobile application that revolutionizes physiotherap
     |
     <a href="https://github.com/Naees/PhysioBuddy/tree/Production/backend">Python Flask Backend</a>
     |
-    <a href="">Demo Video</a>
+    <a href="https://youtube.com/shorts/HIf1_STCSCI">Demo Video</a>
 </p>
 
 ## Awards & Recognition
