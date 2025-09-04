@@ -17,7 +17,10 @@ PhysioBuddy is an innovative mobile application that revolutionizes physiotherap
 </p>
 
 ## Awards & Recognition
-- 1st Place GenAI Augmentation Challenge 2025 
+- 1st Place GenAI Augmentation Challenge 2025
+- <a href="https://www.linkedin.com/posts/ccds-innovation-lab_genaiaugmentationchallenge2025-innovationlab-activity-7367135028599820288-YD4U?utm_source=share&utm_medium=member_desktop&rcm=ACoAAFAmsoYBGQ02rdCe_pRuTYIfVe_m8bRcOrk">Innovation Lab @ NTU CCDS</a>
+- <a href="https://www.linkedin.com/posts/ongca_last-saturday-i-had-the-privilege-of-co-organizing-activity-7366496433694302210-SFJ5?utm_source=share&utm_medium=member_desktop&rcm=ACoAAFAmsoYBGQ02rdCe_pRuTYIfVe_m8bRcOrk">Ong Chin Ann, Lecturer @ NTU</a>
+- <a href="https://www.instagram.com/p/DOK7ATaif9Y/?utm_source=ig_web_copy_link">NTU CCDS</a>
 
 
 ## Meet the team 
